@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Time Map</title>
+  <link rel="stylesheet" href="lib/maplibre-gl.css" />
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+  <!-- left toolbar -->
+  <nav id="toolbar">
+    <div class="toolbar-header">
+      <p id="title"></p>
+      <p id="subtitle"></p>
+    </div>
+    <button class="tab" data-panel="layers">
+      <svg viewBox="0 0 24 24"><path d="M12 3 2 8l10 5 10-5-10-5Z"/><path d="m2 13 10 5 10-5"/><path d="m2 17.5 10 5 10-5" opacity=".5"/></svg>
+      <span>Layers</span>
+    </button>
+    <button class="tab" data-panel="filters">
+      <svg viewBox="0 0 24 24"><path d="M3 5h18l-7 8v6l-4 2v-8L3 5Z"/></svg>
+      <span>Filters</span>
+    </button>
+    <button class="tab" data-panel="about">
+      <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 11v6M12 7.5v.5"/></svg>
+      <span>Help</span>
+    </button>
+  </nav>
+
+  <!-- slide-out panel -->
+  <aside id="panel">
+    <button id="panel-close" title="Close">×</button>
+    <div class="panel-inner" id="panel-layers" hidden>
+      <h2>Layers</h2>
+      <p class="hint">Datasets on the map. The view buttons above the map switch these for you; tick more than one to see them together.</p>
+      <div id="layers-list"></div>
+      <h2>Base map</h2>
+      <div id="basemap-list"></div>
+    </div>
+    <div class="panel-inner" id="panel-filters" hidden>
+      <h2>Filters</h2>
+      <p class="hint">Numbers count events in the current time window. An event stays visible while at least one of its categories is ticked.</p>
+      <div id="filters-list"></div>
+    </div>
+    <div class="panel-inner" id="panel-about" hidden>
+      <h2>How to use</h2>
+      <ul class="help">
+        <li><b>Time window:</b> drag the bright box in the timeline to move it, drag its edges to resize it, or drag on empty space to draw a new one. <kbd>←</kbd> <kbd>→</kbd> step it forward and back.</li>
+        <li><b>Highlight a period:</b> click a bar. Events from that period are lit up on the map and the rest are dimmed. Click it again or press <kbd>Esc</kbd> to clear.</li>
+        <li><b>Event details:</b> click a dot. Its events are listed on the right and marked in white on the timeline.</li>
+        <li><b>Zoom the timeline:</b> mouse wheel. Scroll sideways or drag the date axis to pan, and double-click to reset.</li>
+        <li>Dots grow with the number of events at the same location.</li>
+      </ul>
+    </div>
+  </aside>
+
+  <div id="map"></div>
+  <div id="views"></div>
+  <div id="cards" hidden></div>
+  <button id="basemap-toggle"><span></span></button>
+  <div id="maptip"></div>
+
+  <!-- timeline -->
+  <section id="timeline">
+    <div class="tl-header">
+      <div id="tl-range"></div>
+      <div id="tl-highlight" hidden></div>
+      <div class="tl-controls">
+        <button id="tl-prev" title="Previous window (←)">‹</button>
+        <button id="tl-next" title="Next window (→)">›</button>
+        <span class="sep"></span>
+        <span id="tl-bins">
+          <button data-bin="auto">auto</button><button data-bin="day">day</button><button data-bin="week">week</button><button data-bin="month">month</button>
+        </span>
+        <span class="sep"></span>
+        <button id="tl-fit" title="Zoom the timeline to the window">fit window</button>
+        <button id="tl-all" title="Show the full date range">full range</button>
+      </div>
+    </div>
+    <div id="hist-wrap">
+      <canvas id="hist"></canvas>
+      <div id="histtip"></div>
+    </div>
+  </section>
+
+  <div id="loading">Loading events…</div>
+
+  <script src="lib/maplibre-gl.js"></script>
+  <script src="lib/deck.gl.min.js"></script>
+  <script src="config.js"></script>
+  <script src="data/data.js"></script>
+  <script src="js/store.js"></script>
+  <script src="js/map.js"></script>
+  <script src="js/histogram.js"></script>
+  <script src="js/panels.js"></script>
+  <script>
+    TM.updateNow();
+    TM.histogram.setBin(CONFIG.defaultBin || "auto");
+    document.getElementById("loading").remove();
+  </script>
+</body>
+</html>
