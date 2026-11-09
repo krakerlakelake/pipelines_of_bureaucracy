@@ -55,9 +55,3 @@ to touch it.
   all of its associations in a group are unticked.
 * Events with no category are listed as **Uncategorised**, so nothing silently disappears.
 
-## Hosting later
-
-Copy the whole folder to any static host (GitHub Pages, Netlify, a plain web server). Only
-`data-source/` and the `*.js` build/serve scripts are unnecessary online. Before publishing,
-check the OpenStreetMap tile usage policy; for heavy traffic, switch `basemaps` in
-`config.js` to a tile provider with a key.
