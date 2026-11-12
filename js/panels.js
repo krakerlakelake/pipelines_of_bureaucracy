@@ -55,15 +55,31 @@
     $("basemap-list").innerHTML = Object.keys(CONFIG.basemaps)
       .map((n) => `<label class="row"><input type="radio" name="basemap" value="${esc(n)}" ${S.basemap === n ? "checked" : ""}><span class="box round"></span><span class="lbl">${esc(n[0].toUpperCase() + n.slice(1))}</span></label>`)
       .join("");
+    renderAreaToggle();
   }
   $("layers-list").addEventListener("change", (e) => {
     const i = +e.target.dataset.ds;
     const on = S.datasetOn.slice();
     on[i] = e.target.checked;
-    TM.update({ datasetOn: on, selectedLoc: -1 }, "filters");
+    TM.update({ datasetOn: on, selectedLoc: -1, selectedArea: -1 }, "filters");
   });
   $("basemap-list").addEventListener("change", (e) => TM.setBasemap(e.target.value));
   TM.on("basemap", () => { renderLayers(); renderBasemapToggle(); });
+
+  /* ---------- court display toggle (points / areas) ---------- */
+  const areaDs = D.datasets.filter((d) => d.areaConf);
+  function renderAreaToggle() {
+    const block = $("areamode-block");
+    if (!D.nAreas) { block.hidden = true; return; }
+    block.hidden = false;
+    $("areamode-title").textContent = areaDs.map((d) => d.areaConf.label || "Courts").join(" / ");
+    const off = !areaDs.some((d) => S.datasetOn[d.index]);
+    $("areamode-list").innerHTML =
+      `<label class="row"><input type="radio" name="areamode" value="points" ${S.areaView ? "" : "checked"}><span class="box round"></span><span class="lbl">Points <span class="muted">(court house)</span></span></label>` +
+      `<label class="row"><input type="radio" name="areamode" value="areas" ${S.areaView ? "checked" : ""}><span class="box round"></span><span class="lbl">Areas <span class="muted">(court jurisdiction)</span></span></label>`;
+    $("areamode-list").classList.toggle("off", off);
+  }
+  $("areamode-list").addEventListener("change", (e) => TM.setAreaView(e.target.value === "areas"));
 
   /* ---------- filters panel ---------- */
   function renderFilters() {
@@ -156,17 +172,19 @@
   const cardsEl = $("cards");
   const PAGE = 100;
   let shownCount = PAGE, lastKey = "";
+  const anySelected = () => S.selectedLoc >= 0 || S.selectedArea >= 0;
 
   function renderCards() {
     const sel = TM.derived.selectedEvents;
-    const key = S.selectedLoc + ":" + sel.length + ":" + (sel[0] || 0) + ":" + (sel[sel.length - 1] || 0) + ":" + (S.highlight ? S.highlight.start : "");
+    const target = S.selectedArea >= 0 ? "a" + S.selectedArea : "l" + S.selectedLoc;
+    const key = target + ":" + sel.length + ":" + (sel[0] || 0) + ":" + (sel[sel.length - 1] || 0) + ":" + (S.highlight ? S.highlight.start : "");
     if (key === lastKey) return;
-    const sameLoc = lastKey.split(":")[0] === String(S.selectedLoc);
+    const sameLoc = lastKey.split(":")[0] === target;
     lastKey = key;
-    if (S.selectedLoc < 0 || !sel.length) {
+    if (!anySelected() || !sel.length) {
       cardsEl.hidden = true;
       cardsEl.innerHTML = "";
-      if (S.selectedLoc >= 0 && !sel.length) TM.update({ selectedLoc: -1 });
+      if (anySelected() && !sel.length) TM.update({ selectedLoc: -1, selectedArea: -1 });
       return;
     }
     if (!sameLoc) shownCount = PAGE;
@@ -175,7 +193,11 @@
     const first = TM.eventInfo(sel[0]);
     const names = new Set();
     for (let k = 0; k < Math.min(sel.length, 400); k++) names.add(TM.eventInfo(sel[k]).location);
-    const place = names.size === 1 ? first.location : `${names.size}${sel.length > 400 ? "+" : ""} addresses at this point`;
+    let place;
+    if (S.selectedArea >= 0) {
+      const courts = D.areas[S.selectedArea].courts;
+      place = courts.length === 1 ? courts[0] : `${courts.length} courts sharing this area`;
+    } else place = names.size === 1 ? first.location : `${names.size}${sel.length > 400 ? "+" : ""} addresses at this point`;
     const span = D.evDay[sel[0]] !== D.evDay[sel[sel.length - 1]] ? `${TM.fmtDay(D.evDay[sel[0]])} – ${TM.fmtDay(D.evDay[sel[sel.length - 1]])}` : TM.fmtDay(D.evDay[sel[0]]);
 
     let html = `<div class="card-head"><div><div class="ch-count">${sel.length.toLocaleString()} event${sel.length === 1 ? "" : "s"}</div><div class="ch-place">${esc(place)}</div><div class="ch-span">${span}</div></div><button class="close" title="Close (Esc)">×</button></div><ul class="card-list">`;
@@ -211,7 +233,7 @@
   }
 
   cardsEl.addEventListener("click", (e) => {
-    if (e.target.closest(".close")) TM.update({ selectedLoc: -1 });
+    if (e.target.closest(".close")) TM.update({ selectedLoc: -1, selectedArea: -1 });
     else if (e.target.closest(".more button")) { shownCount += PAGE; lastKey = ""; renderCards(); }
   });
   cardsEl.addEventListener("mouseover", (e) => {
@@ -225,7 +247,7 @@
   document.addEventListener("keydown", (e) => {
     if (e.target.tagName === "INPUT") return;
     if (e.key === "Escape") {
-      if (S.highlight || S.selectedLoc >= 0) TM.update({ highlight: null, selectedLoc: -1 });
+      if (S.highlight || anySelected()) TM.update({ highlight: null, selectedLoc: -1, selectedArea: -1 });
       else setPanel(null);
     } else if (e.key === "ArrowLeft") TM.histogram.stepWindow(-1);
     else if (e.key === "ArrowRight") TM.histogram.stepWindow(1);

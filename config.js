@@ -19,11 +19,26 @@ window.CONFIG = {
    * In events.csv, every column whose name starts with "association" is read as an
    * association, and every column starting with "source" is read as a source id.
    * Any other column (e.g. "comments") is shown in the event popup automatically.
+   *
+   * areas (optional): a GeoJSON file in the dataset folder with one polygon per court.
+   *   key       the property holding the court name, spelled exactly as in the
+   *             events' `location` column
+   *   label     name of the toggle in the Layers panel
+   *   unit      what one event is called in the area tooltip and legend
+   *   matchHint the build warns about locations matching this text that have no area
+   * Events whose location matches a court can then be drawn as shaded areas instead
+   * of dots (toggle in the Layers panel). Courts with identical geometry are merged
+   * into one area and their cases add up.
    */
   dateFormat: "MM/DD/YYYY", // also understands YYYY-MM-DD; a time column ("time", hh:mm) is optional.
   // A dataset can override it, e.g. { ..., dateFormat: "DD.MM.YYYY" } if Numbers exports German-style dates.
   datasets: [
-    { id: "dispossession", label: "Property dispossession", folder: "data-source/dispossession" },
+    {
+      id: "dispossession",
+      label: "Property dispossession",
+      folder: "data-source/dispossession",
+      areas: { file: "court_areas.geojson", key: "court", label: "Court cases", unit: "case", matchHint: "court" },
+    },
     { id: "damage", label: "Mariupol damage", folder: "data-source/damage" },
   ],
 
@@ -46,11 +61,26 @@ window.CONFIG = {
     default: "#999999",
   },
 
+  /* ---------- Court areas ----------
+   * areaView: start in area view (true) or point view (false). A view below can
+   * override it with its own areaView setting.
+   * areaColor: the blue of the areas; its opacity grows in proportion to the number
+   * of cases shown, from areaOpacity[0] (one case) to areaOpacity[1] (the top of the scale).
+   * areaScale: "fixed" (default) puts the top of the scale at the most cases any area has in
+   * any period as long as the time window, so sliding the window changes the shading;
+   * "window" makes the busiest area in the current window always the darkest.
+   */
+  areaView: false,
+  areaScale: "fixed",
+  areaColor: "#1f6fd1",
+  areaOpacity: [0.06, 0.85],
+
   /* ---------- Views ----------
    * The buttons at the top of the map. A view sets the camera, the base map and
    * which datasets are switched on, plus the time window. Users can still turn
    * any other dataset on afterwards from the Layers panel.
    * center is [longitude, latitude]; window is [start, end] as YYYY-MM-DD.
+   * Optional: areaView: true/false to switch between court areas and points.
    */
   views: [
     {

@@ -87,6 +87,7 @@ a:hover { color: var(--accent); }
 #panel section.ds.off { opacity: 0.45; }
 #panel h3 { font-size: var(--normal); text-transform: uppercase; letter-spacing: 0.1em; color: var(--offwhite); margin: 0 0 10px; padding-bottom: 6px; border-bottom: 1px solid var(--midgrey); }
 #panel .muted { color: var(--midwhite); text-transform: none; letter-spacing: 0; font-weight: normal; }
+#areamode-list.off { opacity: 0.45; }
 .group { margin: 0 0 12px; }
 .group-head { display: flex; justify-content: space-between; color: var(--midwhite); font-size: var(--xsmall); text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 4px; }
 .group-head a { cursor: pointer; color: var(--midwhite); text-transform: none; letter-spacing: 0; }
@@ -141,6 +142,16 @@ kbd { border: 1px solid var(--midwhite); border-radius: 3px; padding: 0 4px; fon
 }
 #views button:hover { color: var(--offwhite); border-color: var(--offwhite); }
 #views button.active { color: var(--accent); border-color: var(--accent); }
+
+/* ---------- court area legend ---------- */
+#area-legend {
+  position: fixed; top: 56px; left: calc(var(--toolbar-w) + 14px); z-index: 10; width: 220px;
+  background: var(--panel-bg); border: 1px solid var(--midgrey); padding: 8px 10px 7px; font-size: var(--xsmall);
+}
+#area-legend .lg-t { text-transform: uppercase; letter-spacing: 0.08em; color: var(--midwhite); margin-bottom: 6px; }
+#area-legend .lg-bar { height: 10px; background-color: #f2efe9; border: 1px solid var(--darkwhite); }
+#area-legend .lg-n { color: var(--darkwhite); margin-top: 5px; line-height: 1.4; }
+#area-legend .lg-s { display: flex; justify-content: space-between; color: var(--lightwhite); margin-top: 4px; font-variant-numeric: tabular-nums; }
 
 /* ---------- basemap toggle ---------- */
 #basemap-toggle {
@@ -224,4 +235,5 @@ kbd { border: 1px solid var(--midwhite); border-radius: 3px; padding: 0 4px; fon
   #tl-bins { white-space: nowrap; }
   #basemap-toggle { right: 50px; width: 52px; height: 52px; }
   #views { flex-wrap: wrap; right: 10px; }
+  #area-legend { top: auto; bottom: calc(var(--timeline-h) + 80px); width: 180px; }
 }

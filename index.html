@@ -35,6 +35,11 @@
       <h2>Layers</h2>
       <p class="hint">Datasets on the map. The view buttons above the map switch these for you; tick more than one to see them together.</p>
       <div id="layers-list"></div>
+      <div id="areamode-block" hidden>
+        <h2 id="areamode-title">Court cases</h2>
+        <p class="hint">Show court cases as dots at the court house, or shade each court's area blue, darker the more cases it has in the time window. Courts that share an area are added together.</p>
+        <div id="areamode-list"></div>
+      </div>
       <h2>Base map</h2>
       <div id="basemap-list"></div>
     </div>
@@ -51,12 +56,14 @@
         <li><b>Event details:</b> click a dot. Its events are listed on the right and marked in white on the timeline.</li>
         <li><b>Zoom the timeline:</b> mouse wheel. Scroll sideways or drag the date axis to pan, and double-click to reset.</li>
         <li>Dots grow with the number of events at the same location.</li>
+        <li><b>Court areas:</b> in the Layers panel, switch court cases from points to areas. Each court's area is shaded in proportion to its cases in the time window (the legend at the top left gives the scale); click an area to list its cases.</li>
       </ul>
     </div>
   </aside>
 
   <div id="map"></div>
   <div id="views"></div>
+  <div id="area-legend" hidden></div>
   <div id="cards" hidden></div>
   <button id="basemap-toggle"><span></span></button>
   <div id="maptip"></div>

@@ -36,12 +36,14 @@
   const datasets = []; // {id, label, index, assocIds:[global], locStart, locEnd, minDay, maxDay, sources, names}
   const assocs = []; // global association list
   const groups = ["Categories"]; // group 0 = categories
+  const areas = []; // global area list: {ds, courts:[names], geometry}
   let nEvents = 0, nLocs = 0;
   DATA.datasets.forEach((d) => { nEvents += d.events.length; nLocs += d.locations.length; });
 
   const evDay = new Int32Array(nEvents);
   const evDs = new Uint8Array(nEvents);
   const evLoc = new Int32Array(nEvents);
+  const evArea = new Int32Array(nEvents).fill(-1); // court area of the event, or -1
   const evLocal = new Int32Array(nEvents); // index inside its dataset's events array
   const evAssocStart = new Int32Array(nEvents + 1);
   const evAssocList = [];
@@ -71,6 +73,14 @@
     assocs.push({ id: "__uncategorised", title: "Uncategorised", desc: "Events without a category association", mode: "CATEGORY", group: 0, ds: di, color: CONFIG.colors.default || "#999999", pseudo: true });
     let uncatUsed = 0;
 
+    // areas of this dataset
+    const areaStart = areas.length;
+    const nameArea = d.nameArea || null;
+    if (d.areas) {
+      ds.areaConf = conf.areas || {};
+      d.areas.forEach((a) => areas.push({ ds: di, courts: a.courts, geometry: a.geometry }));
+    }
+
     d.locations.forEach((p) => { locLon[l] = p[0]; locLat[l] = p[1]; locDs[l] = di; l++; });
     ds.locEnd = l;
 
@@ -78,6 +88,7 @@
       evDay[e] = row[0];
       evDs[e] = di;
       evLoc[e] = ds.locStart + row[1];
+      if (nameArea && nameArea[row[5]] >= 0) evArea[e] = areaStart + nameArea[row[5]];
       evLocal[e] = ri;
       evAssocStart[e] = evAssocList.length;
       let hasCat = false;
@@ -120,7 +131,16 @@
   const fill = locStart.slice(0, nLocs);
   for (let i = 0; i < nEvents; i++) locEvents[fill[evLoc[i]]++] = i;
 
-  TM.data = { datasets, assocs, groups, nEvents, nLocs, evDay, evDs, evLoc, evLocal, evAssocStart, evAssoc, evMonth, locLon, locLat, locDs, locStart, locEvents };
+  // area -> events (CSR)
+  const nAreas = areas.length;
+  const areaEvStart = new Int32Array(nAreas + 1);
+  for (let i = 0; i < nEvents; i++) if (evArea[i] >= 0) areaEvStart[evArea[i] + 1]++;
+  for (let a = 0; a < nAreas; a++) areaEvStart[a + 1] += areaEvStart[a];
+  const areaEvents = new Int32Array(areaEvStart[nAreas]);
+  const afill = areaEvStart.slice(0, nAreas);
+  for (let i = 0; i < nEvents; i++) if (evArea[i] >= 0) areaEvents[afill[evArea[i]]++] = i;
+
+  TM.data = { datasets, assocs, groups, nEvents, nLocs, evDay, evDs, evLoc, evLocal, evAssocStart, evAssoc, evMonth, locLon, locLat, locDs, locStart, locEvents, areas, nAreas, evArea, areaEvStart, areaEvents };
 
   /* ---------- state ---------- */
   const firstView = CONFIG.views[0];
@@ -131,6 +151,8 @@
     window: [TM.dayFromISO(firstView.window[0]), TM.dayFromISO(firstView.window[1])], // inclusive days
     highlight: null, // {start, end} day range (end exclusive) of a clicked histogram bar
     selectedLoc: -1,
+    selectedArea: -1, // area clicked in area view
+    areaView: nAreas > 0 && !!(firstView.areaView !== undefined ? firstView.areaView : CONFIG.areaView), // court areas instead of dots
     hoverDay: null,
     basemap: firstView.basemap || "map",
   });
@@ -194,14 +216,20 @@
 
   function computeSelection() {
     const sel = [];
-    const loc = state.selectedLoc;
-    if (loc >= 0) {
-      for (let k = locStart[loc]; k < locStart[loc + 1]; k++) {
-        const i = locEvents[k];
+    const loc = state.selectedLoc, area = state.selectedArea;
+    if (area >= 0) {
+      for (let k = areaEvStart[area]; k < areaEvStart[area + 1]; k++) {
+        const i = areaEvents[k];
         if (derived.shown[i]) sel.push(i);
       }
-      sel.sort((a, b) => evDay[a] - evDay[b]);
+    } else if (loc >= 0) {
+      for (let k = locStart[loc]; k < locStart[loc + 1]; k++) {
+        const i = locEvents[k];
+        // in area view, court events belong to their area, not to the dot
+        if (derived.shown[i] && !(state.areaView && evArea[i] >= 0)) sel.push(i);
+      }
     }
+    sel.sort((a, b) => evDay[a] - evDay[b]);
     derived.selectedEvents = sel;
   }
 
@@ -232,6 +260,10 @@
     TM.emit("change", { filters: true });
   };
 
+  TM.setAreaView = function (on) {
+    TM.update({ areaView: nAreas > 0 && !!on, selectedLoc: -1, selectedArea: -1 }, "filters");
+  };
+
   /* ---------- event accessors for popups ---------- */
   TM.eventInfo = function (i) {
     const ds = datasets[evDs[i]];
@@ -259,8 +291,10 @@
         datasetOn: datasets.map((d) => v.datasets.includes(d.id)),
         window: v.window ? [TM.dayFromISO(v.window[0]), TM.dayFromISO(v.window[1])] : state.window,
         basemap: v.basemap || state.basemap,
+        areaView: v.areaView !== undefined ? nAreas > 0 && !!v.areaView : state.areaView,
         highlight: null,
         selectedLoc: -1,
+        selectedArea: -1,
       },
       "filters"
     );
