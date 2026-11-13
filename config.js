@@ -70,7 +70,7 @@ window.CONFIG = {
    * areaColor: the blue of the areas; its opacity grows in proportion to the number
    * of cases shown, from areaOpacity[0] (one case) to areaOpacity[1] (the top of the scale).
    */
-  areaView: false,
+  areaView: true,
   areaColor: "#1f5fa8", // same blue as the court-case dots
   areaOpacity: [0.06, 0.85],
 
