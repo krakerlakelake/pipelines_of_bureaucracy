@@ -48,7 +48,7 @@ window.CONFIG = {
    */
   colors: {
     suspected_ownerless_property: "#e63946",
-    court_case: "#457b9d",
+    court_case: "#1f5fa8", // deeper, more saturated version of the old #457b9d so it reads against the map and the red
     detention: "#f4a261",
 
     "damage:destroyed": "#c60010",
@@ -61,19 +61,27 @@ window.CONFIG = {
     default: "#999999",
   },
 
+  // Categories drawn above all others (with a thin white edge), e.g. court cases over notices.
+  drawOnTop: ["court_case"],
+
   /* ---------- Court areas ----------
    * areaView: start in area view (true) or point view (false). A view below can
    * override it with its own areaView setting.
    * areaColor: the blue of the areas; its opacity grows in proportion to the number
    * of cases shown, from areaOpacity[0] (one case) to areaOpacity[1] (the top of the scale).
-   * areaScale: "fixed" (default) puts the top of the scale at the most cases any area has in
-   * any period as long as the time window, so sliding the window changes the shading;
-   * "window" makes the busiest area in the current window always the darkest.
    */
   areaView: false,
-  areaScale: "fixed",
-  areaColor: "#1f6fd1",
+  areaColor: "#1f5fa8", // same blue as the court-case dots
   areaOpacity: [0.06, 0.85],
+
+  /* ---------- Size and shading scale ----------
+   * Dot sizes and area shading share one rule. "fixed" (default): the top of the scale is
+   * the most events any dot (or area) has in any period as long as the time window, so
+   * sliding the window changes sizes and shading with the counts. "window": the biggest
+   * dot / busiest area in the current window always gets the top of the scale.
+   */
+  scale: "fixed",
+  minScaleTop: 25, // the biggest dot never stands for fewer events than this, so sparse data stays small
 
   /* ---------- Views ----------
    * The buttons at the top of the map. A view sets the camera, the base map and
@@ -122,8 +130,8 @@ window.CONFIG = {
   },
 
   /* ---------- Look ---------- */
-  eventRadius: 5, // smallest dot radius, px
-  maxEventRadius: 22, // dots grow with the number of events at a location, up to this
+  eventRadius: 4, // radius of a dot with one event, px
+  maxEventRadius: 28, // radius of the biggest dot; a dot's area is proportional to its events, the same scale for every category
   defaultBin: "auto", // histogram bin size: "auto" | "day" | "week" | "month"
 };
 

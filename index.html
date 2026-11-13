@@ -55,7 +55,7 @@
         <li><b>Highlight a period:</b> click a bar. Events from that period are lit up on the map and the rest are dimmed. Click it again or press <kbd>Esc</kbd> to clear.</li>
         <li><b>Event details:</b> click a dot. Its events are listed on the right and marked in white on the timeline.</li>
         <li><b>Zoom the timeline:</b> mouse wheel. Scroll sideways or drag the date axis to pan, and double-click to reset.</li>
-        <li>Dots grow with the number of events at the same location.</li>
+        <li>Dots grow with the number of events at the same location: a dot's area is proportional to its events, on the same scale for every category.</li>
         <li><b>Court areas:</b> in the Layers panel, switch court cases from points to areas. Each court's area is shaded in proportion to its cases in the time window (the legend at the top left gives the scale); click an area to list its cases.</li>
       </ul>
     </div>
@@ -92,6 +92,19 @@
   </section>
 
   <div id="loading">Loading events…</div>
+  <script>
+    // If anything fails while starting up, say so on the loading screen instead of hanging.
+    window.addEventListener("error", function (e) {
+      var el = document.getElementById("loading");
+      if (!el) return;
+      var file = e.filename ? e.filename.split("/").slice(-2).join("/") : "";
+      var missing = e.target && e.target.tagName === "SCRIPT" ? "Could not load " + e.target.getAttribute("src") + " (is the file in the folder?)" : "";
+      el.style.textTransform = "none";
+      el.innerHTML = '<div style="max-width:640px;line-height:1.6;letter-spacing:0">The map could not start.<br><span style="color:#eb443e">' +
+        (missing || (e.message + (file ? " (" + file + ":" + e.lineno + ")" : ""))) +
+        "</span><br>Check that every file is in place (css/, js/, lib/, data/data.js) and reload with Cmd+Shift+R.</div>";
+    }, true);
+  </script>
 
   <script src="lib/maplibre-gl.js"></script>
   <script src="lib/deck.gl.min.js"></script>

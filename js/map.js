@@ -1,8 +1,8 @@
 /*
  * map.js: base map (MapLibre) + event dots and court areas (deck.gl, WebGL)
  * --------------------------------------------------------------------------
- * Events at identical coordinates are drawn as one dot whose size grows with
- * the number of shown events there. Click a dot to open its event cards.
+ * Events at identical coordinates are drawn as one dot. All dots share one size scale,
+ * whatever their category: a dot's area is proportional to its number of shown events. Click a dot to open its event cards.
  *
  * Area view (toggle in the Layers panel): events whose location is a court listed
  * in the dataset's area file are not drawn as dots; instead each court's area is
@@ -78,6 +78,9 @@
 
   const rMin = CONFIG.eventRadius || 5, rMax = CONFIG.maxEventRadius || 22;
   const DIM = [130, 130, 130];
+  const domCat = new Int32Array(N);
+  const onTopIds = CONFIG.drawOnTop || [];
+  const onTop = catList.map((a) => onTopIds.includes(D.assocs[a].id)); // per category: drawn above the others
 
   /* ---------- per-area aggregation ---------- */
   const NA = D.nAreas;
@@ -96,7 +99,7 @@
    * so sliding the window changes the shading with the counts. It is recomputed only when the
    * window length or the filters change. "window" instead scales to the busiest area in view.
    */
-  const fixedScale = (CONFIG.areaScale || "fixed") !== "window";
+  const fixedScale = (CONFIG.scale || CONFIG.areaScale || "fixed") !== "window"; // also used for dot sizes
   let scaleKey = "", scaleMax = 0;
   const areaDays = []; // per area: sorted days of its events that pass the filters
   function fixedMax(len, filtersChanged) {
@@ -125,6 +128,38 @@
     return best;
   }
 
+  // the same fixed scale for dots: per location, sorted days of the events drawn as that dot
+  let dotKey = "", dotScale = 1;
+  const locDays = [];
+  function dotFixedMax(len, filtersChanged) {
+    if (filtersChanged || !locDays.length) {
+      locDays.length = 0;
+      const pass = TM.derived.pass;
+      for (let l = 0; l < N; l++) {
+        const days = [];
+        for (let k = D.locStart[l]; k < D.locStart[l + 1]; k++) {
+          const i = D.locEvents[k];
+          if (pass[i] && !(S.areaView && D.evArea[i] >= 0)) days.push(D.evDay[i]);
+        }
+        days.sort((x, y) => x - y);
+        locDays.push(days);
+      }
+      dotKey = "";
+    }
+    if (dotKey === String(len)) return dotScale;
+    let best = 1;
+    for (const days of locDays) {
+      if (days.length <= best) continue;
+      for (let lo = 0, hi = 0; hi < days.length; hi++) {
+        while (days[hi] - days[lo] >= len) lo++;
+        if (hi - lo + 1 > best) best = hi - lo + 1;
+      }
+    }
+    dotKey = String(len);
+    dotScale = best;
+    return best;
+  }
+
   function aggregate(filtersChanged) {
     cnt.fill(0); hlCnt.fill(0); tally.fill(0);
     aCnt.fill(0); aHl.fill(0);
@@ -144,24 +179,36 @@
       if (c >= 0) tally[l * K + c]++;
     }
     const hlOn = S.highlight !== null;
-    // order: dimmed, normal, highlighted, selected (later = drawn on top)
-    const buckets = [[], [], [], []];
+    // dominant category per dot (colours it), and draw order:
+    // dimmed, normal, highlighted, selected; within each, CONFIG.drawOnTop categories last (= on top)
+    const buckets = [[], [], [], [], [], [], [], []];
     for (let l = 0; l < N; l++) {
       if (!cnt[l]) continue;
+      let best = -1, bestN = 0;
+      for (let c = 0; c < K; c++) { const t = tally[l * K + c]; if (t > bestN) { bestN = t; best = c; } }
+      domCat[l] = best;
       const b = l === S.selectedLoc ? 3 : hlOn ? (hlCnt[l] ? 2 : 0) : 1;
-      buckets[b].push(l);
+      buckets[b * 2 + (best >= 0 && onTop[best] ? 1 : 0)].push(l);
     }
     nVis = 0;
     for (const b of buckets) for (const l of b) visLocs[nVis++] = l;
+
+    // dot size scale: the most events any dot has in any period as long as the window
+    // (or highlighted bar), so sizes stay comparable while the window slides
+    const len = hlOn ? S.highlight.end - S.highlight.start : S.window[1] - S.window[0] + 1;
+    let dotMax = 1;
+    for (let l = 0; l < N; l++) dotMax = Math.max(dotMax, hlOn ? hlCnt[l] : cnt[l]);
+    if (fixedScale) dotMax = Math.max(dotMax, dotFixedMax(len, filtersChanged));
+    dotMax = Math.max(dotMax, CONFIG.minScaleTop || 25); // sparse data (1–2 events per dot) stays small
 
     for (let j = 0; j < nVis; j++) {
       const l = visLocs[j];
       pos[j * 2] = D.locLon[l];
       pos[j * 2 + 1] = D.locLat[l];
       const n = hlOn && hlCnt[l] ? hlCnt[l] : cnt[l];
-      radius[j] = Math.min(rMax, rMin + 2.2 * Math.log2(n));
-      let best = -1, bestN = 0;
-      for (let c = 0; c < K; c++) { const t = tally[l * K + c]; if (t > bestN) { bestN = t; best = c; } }
+      // one scale for every dot, whatever its category: dot area grows in proportion to its events
+      radius[j] = Math.min(rMax, Math.sqrt(rMin * rMin + (rMax * rMax - rMin * rMin) * ((n - 1) / (dotMax - 1))));
+      const best = domCat[l];
       const rgb = best >= 0 ? D.assocs[catList[best]].rgb : DIM;
       const dim = hlOn && !hlCnt[l] && l !== S.selectedLoc;
       fill[j * 4] = dim ? DIM[0] : rgb[0];
@@ -169,9 +216,11 @@
       fill[j * 4 + 2] = dim ? DIM[2] : rgb[2];
       fill[j * 4 + 3] = dim ? 70 : 215;
       const sel = l === S.selectedLoc;
-      line[j * 4] = line[j * 4 + 1] = line[j * 4 + 2] = sel ? 255 : 0;
-      line[j * 4 + 3] = sel ? 255 : dim ? 60 : 150;
-      lineW[j] = sel ? 2.5 : 1;
+      // white edge on selected dots and on the drawOnTop categories, none on the rest
+      const edged = best >= 0 && onTop[best];
+      line[j * 4] = line[j * 4 + 1] = line[j * 4 + 2] = 255;
+      line[j * 4 + 3] = sel ? 255 : edged ? (dim ? 90 : 235) : 0;
+      lineW[j] = sel ? 2.5 : edged ? 1.2 : 0;
     }
 
     // areas: opacity in proportion to the number of shown cases (highlighted cases while a bar is highlighted)
@@ -250,7 +299,7 @@
         },
         radiusUnits: "pixels",
         lineWidthUnits: "pixels",
-        stroked: false,
+        stroked: true,
         filled: true,
         pickable: true,
         autoHighlight: true,
