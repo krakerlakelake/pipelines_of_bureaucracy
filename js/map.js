@@ -3,6 +3,8 @@
  * --------------------------------------------------------------------------
  * Events at identical coordinates are drawn as one dot. All dots share one size scale,
  * whatever their category: a dot's area is proportional to its number of shown events. Click a dot to open its event cards.
+ * A dot takes the colour of its most frequent category; ties go to the category ranked
+ * higher in CONFIG.drawOnTop, which also sets the drawing order (later = on top).
  *
  * Area view (toggle in the Layers panel): events whose location is a court listed
  * in the dataset's area file are not drawn as dots; instead each court's area is
@@ -80,7 +82,9 @@
   const DIM = [130, 130, 130];
   const domCat = new Int32Array(N);
   const onTopIds = CONFIG.drawOnTop || [];
-  const onTop = catList.map((a) => onTopIds.includes(D.assocs[a].id)); // per category: drawn above the others
+  // per category: 0 = ordinary, 1, 2, … = its position in CONFIG.drawOnTop (higher = drawn above, wins ties)
+  const rank = catList.map((a) => onTopIds.indexOf(D.assocs[a].id) + 1);
+  const R = rank.reduce((m, r) => Math.max(m, r), 0) + 1; // draw layers within each highlight state
 
   /* ---------- per-area aggregation ---------- */
   const NA = D.nAreas;
@@ -179,16 +183,20 @@
       if (c >= 0) tally[l * K + c]++;
     }
     const hlOn = S.highlight !== null;
-    // dominant category per dot (colours it), and draw order:
-    // dimmed, normal, highlighted, selected; within each, CONFIG.drawOnTop categories last (= on top)
-    const buckets = [[], [], [], [], [], [], [], []];
+    // dominant category per dot (colours it; ties go to the higher drawOnTop rank), and draw order:
+    // dimmed, normal, highlighted, selected; within each, by drawOnTop rank (highest last = on top)
+    const buckets = [];
+    for (let b = 0; b < 4 * R; b++) buckets.push([]);
     for (let l = 0; l < N; l++) {
       if (!cnt[l]) continue;
       let best = -1, bestN = 0;
-      for (let c = 0; c < K; c++) { const t = tally[l * K + c]; if (t > bestN) { bestN = t; best = c; } }
+      for (let c = 0; c < K; c++) {
+        const t = tally[l * K + c];
+        if (t > bestN || (t > 0 && t === bestN && rank[c] > rank[best])) { bestN = t; best = c; }
+      }
       domCat[l] = best;
       const b = l === S.selectedLoc ? 3 : hlOn ? (hlCnt[l] ? 2 : 0) : 1;
-      buckets[b * 2 + (best >= 0 && onTop[best] ? 1 : 0)].push(l);
+      buckets[b * R + (best >= 0 ? rank[best] : 0)].push(l);
     }
     nVis = 0;
     for (const b of buckets) for (const l of b) visLocs[nVis++] = l;
@@ -217,7 +225,7 @@
       fill[j * 4 + 3] = dim ? 70 : 215;
       const sel = l === S.selectedLoc;
       // white edge on selected dots and on the drawOnTop categories, none on the rest
-      const edged = best >= 0 && onTop[best];
+      const edged = best >= 0 && rank[best] > 0;
       line[j * 4] = line[j * 4 + 1] = line[j * 4 + 2] = 255;
       line[j * 4 + 3] = sel ? 255 : edged ? (dim ? 90 : 235) : 0;
       lineW[j] = sel ? 2.5 : edged ? 1.2 : 0;
@@ -315,6 +323,7 @@
     );
     overlay.setProps({ layers: out });
     renderLegend();
+    renderKeyLegend();
   }
 
   /* ---------- area legend ---------- */
@@ -345,6 +354,50 @@
       `<div class="lg-s"><span>1</span><span>${areaMax ? areaMax.toLocaleString() : "–"} ${areaUnit(areaMax)}</span></div>` +
       (fixedScale ? `<div class="lg-n">Darkest = the most any court area has in any ${periodName()}</div>` : "");
     legend.hidden = false;
+  }
+
+  /* ---------- category legend (bottom right) ----------
+   * Shown when the current view has legend: true (or CONFIG.legend is true and the view
+   * doesn't say otherwise). Lists the categories of the datasets that are switched on:
+   * the drawOnTop categories first, in their pipeline order, then the rest in the order
+   * of CONFIG.colors. A view can instead give legend: ["id", "id", …] to pick and order them.
+   */
+  const keyLegend = document.getElementById("key-legend");
+  const colorOrder = Object.keys(CONFIG.colors || {});
+  function legendSetting() {
+    const v = CONFIG.views.find((x) => x.id === S.view) || {};
+    return v.legend !== undefined ? v.legend : CONFIG.legend || false;
+  }
+  function renderKeyLegend() {
+    if (!keyLegend) return;
+    const setting = legendSetting();
+    const dsOn = D.datasets.filter((ds) => S.datasetOn[ds.index]);
+    if (!setting || !dsOn.length) { keyLegend.hidden = true; return; }
+    const sortKey = (a) => {
+      const r = onTopIds.indexOf(a.id);
+      if (r >= 0) return r;
+      const c = colorOrder.indexOf(a.id);
+      return 1000 + (c >= 0 ? c : 500) + (a.pseudo ? 1000 : 0);
+    };
+    let html = "";
+    for (const ds of dsOn) {
+      let cats = ds.assocIds.map((i) => [i, D.assocs[i]]).filter(([, a]) => a.mode === "CATEGORY" && !a.unused);
+      if (Array.isArray(setting)) cats = setting.map((id) => cats.find(([, a]) => a.id === id)).filter(Boolean);
+      else cats.sort((x, y) => sortKey(x[1]) - sortKey(y[1]));
+      if (!cats.length) continue;
+      if (dsOn.length > 1) html += `<div class="kl-t">${escapeHTML(ds.label)}</div>`;
+      let prevTop = null;
+      for (const [i, a] of cats) {
+        const top = onTopIds.includes(a.id);
+        if (prevTop === true && !top) html += `<div class="kl-sep"></div>`;
+        prevTop = top;
+        const off = !S.assocOn[i];
+        html += `<div class="kl-row${off ? " off" : ""}" title="${escapeHTML(a.desc || a.title)}">` +
+          `<span class="kl-sw${top ? " edged" : ""}" style="background:${a.color}"></span>${escapeHTML(a.title)}</div>`;
+      }
+    }
+    keyLegend.innerHTML = html;
+    keyLegend.hidden = !html;
   }
 
   /* ---------- hover tooltip ---------- */
