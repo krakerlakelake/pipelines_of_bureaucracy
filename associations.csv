@@ -1,0 +1,10 @@
+﻿id,title,desc,mode,filter_path0,filter_path1,filter_path2
+planned_demolition,Planned Demolition,Planned Demolition (administration-declared),CATEGORY,,,
+ordered_demolition,Ordered Demolition,Ordered Demolition (official DNR registry),CATEGORY,,,
+damage:destroyed,Destroyed,Satellite-derived damage level: Destroyed,CATEGORY,,,
+damage:moderate_damage,Moderate Damage,Satellite-derived damage level: Moderate Damage,CATEGORY,,,
+damage:severe_damage,Severe Damage,Satellite-derived damage level: Severe Damage,CATEGORY,,,
+damage:possible_damage,Possible Damage,Satellite-derived damage level: Possible Damage,CATEGORY,,,
+damage:impact_crater_(damage_to_field),Impact Crater (Damage To Field),Satellite-derived damage level: Impact Crater (Damage To Field),CATEGORY,,,
+damage:impact_crater_(damage_to_road),Impact Crater (Damage To Road),Satellite-derived damage level: Impact Crater (Damage To Road),CATEGORY,,,
+land_grant,Land Grant,Developer land grant without auction (Pushilin decree),CATEGORY,,,
