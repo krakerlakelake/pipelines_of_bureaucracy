@@ -37,7 +37,7 @@
       <div id="layers-list"></div>
       <div id="areamode-block" hidden>
         <h2 id="areamode-title">Court cases</h2>
-        <p class="hint">Show court cases as dots at the court house, or shade each court's area blue.<br><b>Note:</b> Areas are based on Ukraine's published raions. City districts are matched based on OSM data.</p>
+        <p class="hint">Show court cases as dots at the court house, or shade each court's area blue, darker the more cases it has in the time window. Courts that share an area are added together.</p>
         <div id="areamode-list"></div>
       </div>
       <h2>Base map</h2>
@@ -51,19 +51,23 @@
     <div class="panel-inner" id="panel-about" hidden>
       <h2>How to use</h2>
       <ul class="help">
-        <li><b>Time window:</b> drag the bright box in the timeline to move it, drag its edges to resize it, or drag on empty space to draw a new one. <kbd>←</kbd> <kbd>→</kbd> step it forward and back.</li>
-        <li><b>Highlight a period:</b> click a bar. Events from that period are lit up on the map and the rest are dimmed. Click it again or press <kbd>Esc</kbd> to clear.</li>
-        <li><b>Event details:</b> click a dot. Its events are listed on the right and marked in white on the timeline.</li>
-        <li><b>Zoom the timeline:</b> mouse wheel. Scroll sideways or drag the date axis to pan, and double-click to reset.</li>
-        <li>Dots grow with the number of events at the same location: a dot's area is proportional to its events, on the same scale for every category.</li>
-        <li><b>Court areas:</b> in the Layers panel, switch court cases from points to areas. Each court's area is shaded in proportion to its cases in the time window (the legend at the top left gives the scale); click an area to list its cases.</li>
+        <li>Drag timeline to move it, drag its edges to resize, or drag on empty space to draw new. <kbd>←</kbd> <kbd>→</kbd> to jump.</li>
+        <li>Click a bar. Events from that period are lit up on the map. Click it again or press <kbd>Esc</kbd> to clear.</li>
+        <li>Click a dot. Its events are listed on the right and marked in white on the timeline.</li>
+        <li>Dots grow with the number of events at the same location: a dot's area is proportional to its events, all categories on the same scale.</li>
+        <li>Each court's area is shaded in proportion to its cases in the time window. Click an area to list its cases.</li>
       </ul>
+      <h2>Sources</h2>
+      <a class="qr" href="https://git-we1rdna.github.io/bureaucratic-dispossession-website/" target="_blank" rel="noopener">
+        <img src="img/qr-sources.svg" alt="QR code linking to git-we1rdna.github.io/bureaucratic-dispossession-website" />
+      </a>
     </div>
   </aside>
 
   <div id="map"></div>
   <div id="views"></div>
   <div id="area-legend" hidden></div>
+  <div id="key-legend" hidden></div>
   <div id="cards" hidden></div>
   <button id="basemap-toggle"><span></span></button>
   <div id="maptip"></div>

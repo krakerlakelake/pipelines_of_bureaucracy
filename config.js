@@ -51,6 +51,7 @@ window.CONFIG = {
     court_case: "#1f5fa8", // deeper, more saturated version of the old #457b9d so it reads against the map and the red
     detention: "#f4a261",
 
+    // Damage levels: one red ramp, darker = worse, drawn underneath the pipeline stages
     "damage:destroyed": "#c60010",
     "damage:severe_damage": "#f3404f",
     "damage:moderate_damage": "#f88a93",
@@ -58,11 +59,24 @@ window.CONFIG = {
     "damage:impact_crater_(damage_to_field)": "#d18f7b",
     "damage:impact_crater_(damage_to_road)": "#d18f7b",
 
+    // Condemnation pipeline: distinct hues, like notices vs court cases, drawn on top with a white edge
+    planned_demolition: "#f4a261", // administration-declared (the "announcement" stage)
+    ordered_demolition: "#1f5fa8", // official DNR registry (the "court case" stage: same blue)
+    land_grant: "#9b5de5", // land handed to a developer (the final stage)
+
     default: "#999999",
   },
 
-  // Categories drawn above all others (with a thin white edge), e.g. court cases over notices.
-  drawOnTop: ["court_case"],
+  /* Categories drawn above all others, with a thin white edge. The order matters:
+   * later in the list = drawn higher, and wins when a dot mixes categories in equal numbers.
+   * So a building that is damaged, then planned for and ordered for demolition shows as
+   * ordered, and a court case sits above a notice at the same address. */
+  drawOnTop: ["planned_demolition", "ordered_demolition", "land_grant", "court_case"],
+
+  /* Small category legend in the bottom-right corner. This is the default for every view;
+   * a view can override it with its own legend setting: true, false, or a list of
+   * category ids to show (in that order). */
+  legend: false,
 
   /* ---------- Court areas ----------
    * areaView: start in area view (true) or point view (false). A view below can
@@ -70,7 +84,7 @@ window.CONFIG = {
    * areaColor: the blue of the areas; its opacity grows in proportion to the number
    * of cases shown, from areaOpacity[0] (one case) to areaOpacity[1] (the top of the scale).
    */
-  areaView: true,
+  areaView: false,
   areaColor: "#1f5fa8", // same blue as the court-case dots
   areaOpacity: [0.06, 0.85],
 
@@ -89,6 +103,7 @@ window.CONFIG = {
    * any other dataset on afterwards from the Layers panel.
    * center is [longitude, latitude]; window is [start, end] as YYYY-MM-DD.
    * Optional: areaView: true/false to switch between court areas and points.
+   * Optional: legend: true/false (or a list of category ids) for the bottom-right legend.
    */
   views: [
     {
@@ -111,7 +126,8 @@ window.CONFIG = {
       bearing: 0,
       pitch: 0,
       basemap: "map",
-      window: ["2022-03-01", "2022-05-31"],
+      window: ["2022-03-01", "2026-08-31"],
+      legend: true,
     },
   ],
 
